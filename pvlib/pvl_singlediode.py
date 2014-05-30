@@ -7,7 +7,7 @@ import scipy
 from scipy.special import lambertw
 import time
 
-
+@pvl_tools.TypeCheck(Module='',IL='x>0',I0='x>0',Rs='x>0',Rsh='x>0',nNsVth='x>0')
 def pvl_singlediode(Module,IL,I0,Rs,Rsh,nNsVth,**kwargs):
     '''
     Solve the single-diode model to obtain a photovoltaic IV curve
@@ -107,47 +107,37 @@ def pvl_singlediode(Module,IL,I0,Rs,Rsh,nNsVth,**kwargs):
 
 
     '''
-    Vars=locals()
-    Expect={'Module':(''),
-            'IL':('x>0'),
-            'I0':('x>0'),
-            'Rs':('x>0'),
-            'Rsh':('x>0'),
-            'nNsVth':('x>0'),
-    }
-
-    var=pvl_tools.Parse(Vars,Expect)
 
     # Find Isc using Lambert W
-    Isc = I_from_V(Rsh=var.Rsh, Rs=var.Rs, nNsVth=var.nNsVth, V=0.01, I0=var.I0, IL=var.IL)
+    Isc = I_from_V(Rsh=Rsh, Rs=Rs, nNsVth=nNsVth, V=0.01, I0=I0, IL=IL)
 
 
     #If passed a dataframe, output a dataframe, if passed a list or scalar,
     #return a dict 
-    if isinstance(var.Rsh,pd.Series):
+    if isinstance(Rsh,pd.Series):
         DFOut=pd.DataFrame({'Isc':Isc})
-        DFOut.index=var.Rsh.index
+        DFOut.index=Rsh.index
     else:
         DFOut={'Isc':Isc}
 
 
-    DFOut['Rsh']=var.Rsh
-    DFOut['Rs']=var.Rs
-    DFOut['nNsVth']=var.nNsVth
-    DFOut['I0']=var.I0
-    DFOut['IL']=var.IL
+    DFOut['Rsh']=Rsh
+    DFOut['Rs']=Rs
+    DFOut['nNsVth']=nNsVth
+    DFOut['I0']=I0
+    DFOut['IL']=IL
 
-    __,Voc_return = golden_sect_DataFrame(DFOut,0,var.Module.V_oc_ref*1.6,Voc_optfcn)
+    __,Voc_return = golden_sect_DataFrame(DFOut,0,Module.V_oc_ref*1.6,Voc_optfcn)
     Voc=Voc_return.copy() #create an immutable copy 
 
-    Pmp,Vmax = golden_sect_DataFrame(DFOut,0,var.Module.V_oc_ref*1.14,pwr_optfcn)
-    Imax = I_from_V(Rsh=var.Rsh, Rs=var.Rs, nNsVth=var.nNsVth, V=Vmax, I0=var.I0, IL=var.IL)
+    Pmp,Vmax = golden_sect_DataFrame(DFOut,0,Module.V_oc_ref*1.14,pwr_optfcn)
+    Imax = I_from_V(Rsh=Rsh, Rs=Rs, nNsVth=nNsVth, V=Vmax, I0=I0, IL=IL)
     # Invert the Power-Current curve. Find the current where the inverted power
     # is minimized. This is Imax. Start the optimization at Voc/2
 
     # Find Ix and Ixx using Lambert W
-    Ix = I_from_V(Rsh=var.Rsh, Rs=var.Rs, nNsVth=var.nNsVth, V=.5*Voc, I0=var.I0, IL=var.IL)
-    Ixx = I_from_V(Rsh=var.Rsh, Rs=var.Rs, nNsVth=var.nNsVth, V=0.5*(Voc+Vmax), I0=var.I0, IL=var.IL)
+    Ix = I_from_V(Rsh=Rsh, Rs=Rs, nNsVth=nNsVth, V=.5*Voc, I0=I0, IL=IL)
+    Ixx = I_from_V(Rsh=Rsh, Rs=Rs, nNsVth=nNsVth, V=0.5*(Voc+Vmax), I0=I0, IL=IL)
 
     '''
     # If the user says they want a curve of with number of points equal to

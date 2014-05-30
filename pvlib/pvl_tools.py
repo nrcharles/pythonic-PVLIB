@@ -6,6 +6,9 @@ import numpy as np
 import ast
 import re
 
+import inspect
+from functools import wraps
+
 class repack():   #repack a dict as a struct
 	
 	'''
@@ -188,6 +191,35 @@ class Parse():		#parse complex logic
 
 		return kwargs
 
+
+class TypeCheck(object):
+    """Decorator that sanitize function arguments using Parse
+    """
+
+    def __init__(self, **kwargs):
+        self.expect = kwargs
+
+
+    def __call__(self, fn):
+
+    	# get the function names for the signature
+    	arg_names = inspect.getargspec(fn).args
+
+        @wraps(fn)
+        def inner(*args, **kwargs):
+    		cleaned_var = Parse(locals(), self.expect)
+
+    		# replace the arguments with the sanitized versions, where available,
+    		# if not, use the current
+    		new_args = (getattr(cleaned_var, name, arg) for name, arg in zip(arg_names, args))
+
+    		# replace the kwargs with sanitized versions where available
+    		for key, val in kwargs.items():
+    			kwargs[key] = getattr(cleaned_var, key, val)
+
+    		# invoke the function with the sanitized argument
+    		return fn(*new_args, **kwargs)
+
 def cosd(angle):
 	"""
 	Cosine with angle input in degrees
@@ -269,6 +301,4 @@ def asind(number):
 
 	res=np.degrees(np.arcsin(number))
 	return res
-
-
 
